@@ -99,6 +99,7 @@ pipeline {
                     --os-type Linux \
                     --ports 5000 \
                     --ip-address Public \
+                    --dns-name-label proshop-aci-stackly025 \
                     --restart-policy Always \
                     --registry-login-server $ACR_LOGIN_SERVER \
                     --registry-username $(az acr credential show --name $ACR_NAME --query username -o tsv) \
