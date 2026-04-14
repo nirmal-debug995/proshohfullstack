@@ -13,6 +13,7 @@ pipeline {
 
         stage('Clone Repo') {
             steps {
+              git branch: 'main',      
                 git 'git@github.com:nirmal-debug995/proshohfullstack.git'
             }
         }
