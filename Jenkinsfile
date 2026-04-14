@@ -31,9 +31,9 @@ pipeline {
         stage('Prepare Backend with Frontend Build') {
             steps {
                 sh '''
-                    rm -rf backend/frontend
-                    mkdir -p backend/frontend
-                    cp -r frontend/build backend/frontend/
+                rm -rf backend/frontend
+                mkdir -p backend/frontend
+                cp -r frontend/build backend/frontend/
                 '''
             }
         }
@@ -41,14 +41,11 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
-                    docker build -t $ACR_LOGIN_SERVER/$IMAGE_NAME:latest -f backend/Dockerfile .
+                docker build -t $ACR_LOGIN_SERVER/$IMAGE_NAME:latest -f backend/Dockerfile .
                 '''
             }
         }
 
-        /* ================================
-           🔐 AZURE LOGIN (FIXED)
-        ================================= */
         stage('Azure Login') {
             steps {
                 withCredentials([
@@ -58,12 +55,12 @@ pipeline {
                     string(credentialsId: 'AZURE_SUBSCRIPTION_ID', variable: 'AZURE_SUBSCRIPTION_ID')
                 ]) {
                     sh '''
-                        az login --service-principal \
-                            -u $AZURE_CLIENT_ID \
-                            -p $AZURE_CLIENT_SECRET \
-                            --tenant $AZURE_TENANT_ID
+                    az login --service-principal \
+                      -u $AZURE_CLIENT_ID \
+                      -p $AZURE_CLIENT_SECRET \
+                      --tenant $AZURE_TENANT_ID
 
-                        az account set --subscription $AZURE_SUBSCRIPTION_ID
+                    az account set --subscription $AZURE_SUBSCRIPTION_ID
                     '''
                 }
             }
@@ -72,7 +69,7 @@ pipeline {
         stage('Login to ACR') {
             steps {
                 sh '''
-                    az acr login --name $ACR_NAME
+                az acr login --name $ACR_NAME
                 '''
             }
         }
@@ -80,7 +77,7 @@ pipeline {
         stage('Push Image to ACR') {
             steps {
                 sh '''
-                    docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:latest
+                docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:latest
                 '''
             }
         }
@@ -88,23 +85,24 @@ pipeline {
         stage('Deploy to ACI') {
             steps {
                 sh '''
-                    az container delete \
-                        --name $ACI_NAME \
-                        --resource-group $RESOURCE_GROUP \
-                        --yes || true
+                az container delete \
+                    --name $ACI_NAME \
+                    --resource-group $RESOURCE_GROUP \
+                    --yes || true
 
-                    az container create \
-                        --resource-group $RESOURCE_GROUP \
-                        --name $ACI_NAME \
-                        --image $ACR_LOGIN_SERVER/$IMAGE_NAME:latest \
-                        --cpu 1 \
-                        --memory 1.5 \
-                        --ports 5000 \
-                        --ip-address Public \
-                        --restart-policy Always \
-                        --registry-login-server $ACR_LOGIN_SERVER \
-                        --registry-username $(az acr credential show --name $ACR_NAME --query username -o tsv) \
-                        --registry-password $(az acr credential show --name $ACR_NAME --query passwords[0].value -o tsv)
+                az container create \
+                    --resource-group $RESOURCE_GROUP \
+                    --name $ACI_NAME \
+                    --image $ACR_LOGIN_SERVER/$IMAGE_NAME:latest \
+                    --cpu 1 \
+                    --memory 1.5 \
+                    --os-type Linux \
+                    --ports 5000 \
+                    --ip-address Public \
+                    --restart-policy Always \
+                    --registry-login-server $ACR_LOGIN_SERVER \
+                    --registry-username $(az acr credential show --name $ACR_NAME --query username -o tsv) \
+                    --registry-password $(az acr credential show --name $ACR_NAME --query passwords[0].value -o tsv)
                 '''
             }
         }
