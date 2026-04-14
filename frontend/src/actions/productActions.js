@@ -26,19 +26,23 @@ import {
 import { logout } from './userActions'
 
 // ===============================
-// AUTO BACKEND URL FIX
+// API BASE URL FIX (PRODUCTION SAFE)
 // ===============================
+const API_URL = process.env.REACT_APP_API_URL || ''
 
-// If frontend runs in production build → use VM backend
-// If local dev → fallback to localhost
-const API_URL =process.env.REACT_APP_API_URL || ""
+// Helper function (clean + reusable)
+const getErrorMessage = (error) => {
+  return (
+    error.response?.data?.message ||
+    error.message ||
+    'Something went wrong'
+  )
+}
 
 // ===============================
 // LIST PRODUCTS
 // ===============================
-export const listProducts = (keyword = '', pageNumber = '') => async (
-  dispatch
-) => {
+export const listProducts = (keyword = '', pageNumber = '') => async (dispatch) => {
   try {
     dispatch({ type: PRODUCT_LIST_REQUEST })
 
@@ -53,8 +57,7 @@ export const listProducts = (keyword = '', pageNumber = '') => async (
   } catch (error) {
     dispatch({
       type: PRODUCT_LIST_FAIL,
-      payload:
-        error.response?.data?.message || error.message,
+      payload: getErrorMessage(error),
     })
   }
 }
@@ -77,8 +80,7 @@ export const listProductDetails = (id) => async (dispatch) => {
   } catch (error) {
     dispatch({
       type: PRODUCT_DETAILS_FAIL,
-      payload:
-        error.response?.data?.message || error.message,
+      payload: getErrorMessage(error),
     })
   }
 }
@@ -104,10 +106,16 @@ export const deleteProduct = (id) => async (dispatch, getState) => {
 
     dispatch({ type: PRODUCT_DELETE_SUCCESS })
   } catch (error) {
+    const message = getErrorMessage(error)
+
+    // logout ONLY if token issue
+    if (message === 'Not authorized, token failed') {
+      dispatch(logout())
+    }
+
     dispatch({
       type: PRODUCT_DELETE_FAIL,
-      payload:
-        error.response?.data?.message || error.message,
+      payload: message,
     })
   }
 }
@@ -140,10 +148,15 @@ export const createProduct = () => async (dispatch, getState) => {
       payload: data,
     })
   } catch (error) {
+    const message = getErrorMessage(error)
+
+    if (message === 'Not authorized, token failed') {
+      dispatch(logout())
+    }
+
     dispatch({
       type: PRODUCT_CREATE_FAIL,
-      payload:
-        error.response?.data?.message || error.message,
+      payload: message,
     })
   }
 }
@@ -184,8 +197,7 @@ export const updateProduct = (product) => async (dispatch, getState) => {
   } catch (error) {
     dispatch({
       type: PRODUCT_UPDATE_FAIL,
-      payload:
-        error.response?.data?.message || error.message,
+      payload: getErrorMessage(error),
     })
   }
 }
@@ -193,39 +205,42 @@ export const updateProduct = (product) => async (dispatch, getState) => {
 // ===============================
 // CREATE REVIEW
 // ===============================
-export const createProductReview = (productId, review) => async (
-  dispatch,
-  getState
-) => {
-  try {
-    dispatch({ type: PRODUCT_CREATE_REVIEW_REQUEST })
+export const createProductReview =
+  (productId, review) => async (dispatch, getState) => {
+    try {
+      dispatch({ type: PRODUCT_CREATE_REVIEW_REQUEST })
 
-    const {
-      userLogin: { userInfo },
-    } = getState()
+      const {
+        userLogin: { userInfo },
+      } = getState()
 
-    const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${userInfo?.token}`,
-      },
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userInfo?.token}`,
+        },
+      }
+
+      await axios.post(
+        `${API_URL}/api/products/${productId}/reviews`,
+        review,
+        config
+      )
+
+      dispatch({ type: PRODUCT_CREATE_REVIEW_SUCCESS })
+    } catch (error) {
+      const message = getErrorMessage(error)
+
+      if (message === 'Not authorized, token failed') {
+        dispatch(logout())
+      }
+
+      dispatch({
+        type: PRODUCT_CREATE_REVIEW_FAIL,
+        payload: message,
+      })
     }
-
-    await axios.post(
-      `${API_URL}/api/products/${productId}/reviews`,
-      review,
-      config
-    )
-
-    dispatch({ type: PRODUCT_CREATE_REVIEW_SUCCESS })
-  } catch (error) {
-    dispatch({
-      type: PRODUCT_CREATE_REVIEW_FAIL,
-      payload:
-        error.response?.data?.message || error.message,
-    })
   }
-}
 
 // ===============================
 // TOP PRODUCTS
@@ -245,8 +260,7 @@ export const listTopProducts = () => async (dispatch) => {
   } catch (error) {
     dispatch({
       type: PRODUCT_TOP_FAIL,
-      payload:
-        error.response?.data?.message || error.message,
+      payload: getErrorMessage(error),
     })
   }
 }
