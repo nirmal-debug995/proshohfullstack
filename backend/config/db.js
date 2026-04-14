@@ -1,18 +1,14 @@
-import mongoose from 'mongoose'
+import { Sequelize } from "sequelize";
 
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
-      useUnifiedTopology: true,
-      useNewUrlParser: true,
-      useCreateIndex: true,
-    })
-
-    console.log(`MongoDB Connected: ${conn.connection.host}`.cyan.underline)
-  } catch (error) {
-    console.error(`Error: ${error.message}`.red.underline.bold)
-    process.exit(1)
+const sequelize = new Sequelize(
+  process.env.DB_NAME || "proshop",
+  process.env.DB_USER || "proshopuser",
+  process.env.DB_PASS || "StrongP@Ss123",
+  {
+    host: process.env.DB_HOST || "20.244.47.247",
+    dialect: "mysql",
+    logging: false,
   }
-}
+);
 
-export default connectDB
+export default sequelize;

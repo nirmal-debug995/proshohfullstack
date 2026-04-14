@@ -1,57 +1,59 @@
-import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import colors from 'colors'
+
+import sequelize from './config/db.js'
 import users from './data/users.js'
 import products from './data/products.js'
+
 import User from './models/userModel.js'
 import Product from './models/productModel.js'
 import Order from './models/orderModel.js'
-import connectDB from './config/db.js'
 
 dotenv.config()
 
-connectDB()
-
+// ===============================
+// IMPORT DATA (MYSQL)
+// ===============================
 const importData = async () => {
   try {
-    await Order.deleteMany()
-    await Product.deleteMany()
-    await User.deleteMany()
+    console.log('🚀 Seeder started')
 
-    const createdUsers = await User.insertMany(users)
+    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0')
 
-    const adminUser = createdUsers[0]._id
+    console.log('🔄 Syncing DB...')
+    await sequelize.sync({ force: true })
 
-    const sampleProducts = products.map((product) => {
-      return { ...product, user: adminUser }
-    })
+    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1')
 
-    await Product.insertMany(sampleProducts)
+    console.log('👤 Creating users...')
+    const createdUsers = await User.bulkCreate(users, { returning: true })
 
-    console.log('Data Imported!'.green.inverse)
+    console.log('📦 Creating products...')
+    const adminUser = createdUsers[0]
+
+    const sampleProducts = products.map((p) => ({
+      name: p.name,
+      image: p.image,
+      description: p.description,
+      brand: p.brand,
+      category: p.category,
+      price: p.price,
+      countInStock: p.countInStock,
+      rating: p.rating || 0,
+      numReviews: p.numReviews || 0,
+      userId: adminUser.id,
+    }))
+
+    await Product.bulkCreate(sampleProducts)
+
+    console.log('✅ DONE SUCCESSFULLY')
     process.exit()
+
   } catch (error) {
-    console.error(`${error}`.red.inverse)
+    console.error('❌ ERROR:', error)
     process.exit(1)
   }
 }
 
-const destroyData = async () => {
-  try {
-    await Order.deleteMany()
-    await Product.deleteMany()
-    await User.deleteMany()
-
-    console.log('Data Destroyed!'.red.inverse)
-    process.exit()
-  } catch (error) {
-    console.error(`${error}`.red.inverse)
-    process.exit(1)
-  }
-}
-
-if (process.argv[2] === '-d') {
-  destroyData()
-} else {
-  importData()
-}
+console.log('🔥 calling importData()')
+importData()
