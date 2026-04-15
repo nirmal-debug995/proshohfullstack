@@ -3,7 +3,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import colors from 'colors'
 import morgan from 'morgan'
-import cors from 'cors'   // ✅ ADDED
+import cors from 'cors'
 
 import sequelize from './config/db.js'
 
@@ -32,7 +32,7 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'))
 }
 
-// ✅ IMPORTANT: Enable CORS for frontend (FIX NETWORK ERROR)
+// Enable CORS
 app.use(cors({
   origin: '*',
 }))
@@ -59,19 +59,15 @@ const __dirname = path.resolve()
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')))
 
 // ===============================
-// Frontend production build
+// ✅ Serve Frontend (FIXED)
 // ===============================
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '/frontend/build')))
+app.use(express.static(path.join(__dirname, '/backend/frontend/build')))
 
-  app.get('*', (req, res) =>
-    res.sendFile(path.resolve(__dirname, 'frontend', 'build', 'index.html'))
+app.get('*', (req, res) =>
+  res.sendFile(
+    path.resolve(__dirname, 'backend', 'frontend', 'build', 'index.html')
   )
-} else {
-  app.get('/', (req, res) => {
-    res.send('API is running....')
-  })
-}
+)
 
 // ===============================
 // Error handlers
@@ -94,7 +90,7 @@ const startServer = async () => {
 
     app.listen(PORT, () =>
       console.log(
-        `Server running in ${process.env.NODE_ENV} mode on port ${PORT}`.yellow.bold
+        `Server running in ${process.env.NODE_ENV || 'production'} mode on port ${PORT}`.yellow.bold
       )
     )
 
